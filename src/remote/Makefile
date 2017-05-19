@@ -2,7 +2,7 @@ SHARED=../shared/lcd.c ../shared/usart.c ../shared/bluetooth.c
 
 all: remote.hex
 
-remote.elf: remote.c $(SHARED)
+remote.elf: remote.c $(SHARED) joystick.c
 	avr-g++ -mmcu=atmega324p -DF_CPU=16000000 -Wall -Os -o $@ $^
 
 remote.hex: remote.elf

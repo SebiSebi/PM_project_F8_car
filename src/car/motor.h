@@ -1,0 +1,18 @@
+#ifndef MOTOR_H__
+#define MOTOR_H__
+
+void DC_motor_init();
+
+/**
+ * @speed between -100 and 100.
+ * @steer between -100 and 100.
+ */
+void set_car_configuration(int speed, int steer);
+
+void set_motor_forward();
+void set_motor_reverse();
+void stop_motors();
+void stop_left_motors();
+void stop_right_motors();
+
+#endif  /* MOTOR_H__ */

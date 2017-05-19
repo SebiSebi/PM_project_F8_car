@@ -7,13 +7,15 @@ static volatile uint8_t flag = 0;
 static volatile uint8_t count = 0;
 static volatile uint8_t saved_tcnt0 = 0;
 static volatile uint8_t saved_count = 0;
+static volatile float saved_distance = 0.0f;
+static volatile uint8_t timer2_count = 0;
 
-ISR(TIMER0_OVF_vect) // Other interrupts are blocked during this routine
+ISR(TIMER0_OVF_vect, ISR_NOBLOCK) // Other interrupts aren't blocked during this routine
 {
 	count++;
 }
 
-ISR(PCINT0_vect) // Other interrupts are blocked during this routine
+ISR(PCINT0_vect, ISR_NOBLOCK) // Other interrupts are blocked during this routine
 {
 	if ((PINA & (1 << PA1)) != 0) {
 		/* Echo rising edge */
@@ -50,6 +52,47 @@ void HC_SR04_init()
 	PCMSK0 |= (1 << PCINT1);
 }
 
+void HC_SR04_set_auto_mode()
+{
+	/* Use Timer2 to generate software interrupts */
+	TCCR2A = 0;
+	TCCR2B = 0;
+	TIMSK2 = 0;
+	timer2_count = 0;
+	sei();
+
+	/* CTC with TOP at OCRA */	
+	TCCR2A |= (1 << WGM21);
+	
+	/* Prescaler 1024 */
+	TCCR2B |= (1 << CS20) | (1 << CS21) | (1 << CS22);
+
+	OCR2A = 255;
+	TIMSK2 |= (1 << OCIE2A); /* Enable interrupt on match OCR2A */
+}
+
+ISR(TIMER2_COMPA_vect, ISR_NOBLOCK)
+{
+	timer2_count++;
+	if (timer2_count == 12) {
+		TIMSK2 &= ~(1 << OCIE2A); /* Temporary disable this interrupt */
+	
+		saved_distance = HC_SR04_get_distance();
+		if (saved_distance <= 15.0f)
+			PORTB |= (1 << PB0);
+		else PORTB &= ~(1 << PB0);
+
+		timer2_count = 0;
+		TCNT2 = 0; /* Reset counter */
+		TIMSK2 |= (1 << OCIE2A); /* Restore interrupt */
+	}	
+}
+
+float HC_SR04_get_distance_auto()
+{
+	return saved_distance;
+}
+
 float HC_SR04_get_distance()
 {
 	double sum = 0;
@@ -66,7 +109,7 @@ float HC_SR04_get_distance()
 		PORTA &= ~(1 << PA0);
 		
 		/* Wait for the Echo */
-		while(flag == 0);
+		while(flag == 0 && count <= 5);
 	
 		sum = sum + (((int)saved_tcnt0 + 255 * saved_count) * 16.0) * 0.017;
 	
