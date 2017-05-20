@@ -11,7 +11,9 @@
 #include "HC_SR04.h"
 #include "motor.h"
 
-void process_distance_command()
+uint8_t horn_pressed = 0;
+
+void process_distance_command(void)
 {
 	char dist[64];
 	sprintf(dist, "%d", (int)HC_SR04_get_distance_auto()); 
@@ -19,7 +21,7 @@ void process_distance_command()
 	BT_put(dist);		
 }
 
-void process_car_command()
+void process_car_command(void)
 {
 	char msg[64];
 
@@ -30,21 +32,41 @@ void process_car_command()
 	int steer = atoi(msg);
 
 	PORTD ^= (1 << PD2);
+	
+	set_car_binary_configuration(speed, steer);
+}
 
-	set_car_configuration(speed, steer);
+void process_horn_command(void)
+{
+	char msg[64];
+	
+	BT_get(msg, 64);
+	if (strcmp(msg, "ON") == 0) {	
+		horn_pressed = 1;
+		PORTB |= (1 << PB0);
+	}
+	else {
+		PORTB &= ~(1 << PB0);
+		horn_pressed = 0;
+	}
+}
+
+void car_init(void)
+{
+	sei(); /* Enable global interrupts */
+	
+	horn_pressed = 0;
+	
+	/* Set buzzer pin as output */
+	DDRB |= (1 << PB0); /* buzzer */
+	PORTB &= ~(1 << PB0);
 }
 
 int main()
 {
-	sei();
-	DDRB |= (1 << PB0); /* buzzer */
-	PORTB &= ~(1 << PB0);
-
+	car_init();	
 	USART0_init();
 	BT_init_slave();
-
-	/* Enable receive interrupts on USART0 */
-	// UCSR0B |= (1 << RXCIE0);
 
 	/* Init distance module */
 	HC_SR04_init();
@@ -62,6 +84,8 @@ int main()
 			process_distance_command();
 		else if (strcmp(cmd, "CAR") == 0)
 			process_car_command();
+		else if (strcmp(cmd, "HORN") == 0)
+			process_horn_command();
 	}
 
 	return 0;

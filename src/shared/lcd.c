@@ -214,6 +214,12 @@ void LCD_writeData(uint8_t data)
     LCD_write(data);
 }
 
+// Sterge toate caracterele de pe LCD.
+void LCD_clear(void)
+{
+	LCD_writeInstr(LCD_INSTR_clearDisplay);
+}
+
 // Afiseaza caracterul pe LCD la adresa curenta.
 void LCD_putChar(char c)
 {

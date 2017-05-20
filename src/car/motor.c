@@ -1,4 +1,5 @@
 #include "motor.h"
+#include "HC_SR04.h"
 
 #include <avr/io.h>
 
@@ -18,9 +19,9 @@ void DC_motor_init()
     TCCR1B |= (1 << CS11) | (1 << CS10);
 
     /* Set TOP (ICR1) to set the period. */
-    ICR1 = 5000; /* (100, 340 min), (10000, 2500) (20000, 2 * 1850)*/
-    OCR1A = 2500;
-    OCR1B = 2500;
+    ICR1 = 2000; /* (100, 340 min), (10000, 2500) (20000, 2 * 1850)*/
+    OCR1A = 1800;
+    OCR1B = 1800;
 
     /* Baterie plina (9.2V) la 50Hz PWM */
     /* 5000 -> 2.3V pe motoare -> nu pornesc */
@@ -30,6 +31,49 @@ void DC_motor_init()
     /* Initialize motor direction */
     DDRC =  0b00001111;
     PORTC = 0b00000000;
+}
+
+void set_car_binary_configuration(int speed, int steer)
+{
+	if (speed > -10 && speed < 10) {
+		stop_motors();
+		return ;
+	}
+
+	if (speed > 0 && HC_SR04_get_distance_auto() <= 33.0f) {
+		stop_motors();
+		return ;
+	}
+
+	if (speed > 0) {
+		if (steer < -10) {
+			set_left_motors_reverse();
+			set_right_motors_forward();
+		}
+		else if (steer > 10) {
+			set_left_motors_forward();
+			set_right_motors_reverse();
+		}
+		else {
+			set_left_motors_forward();
+			set_right_motors_forward();
+		}
+	}
+	else {
+		if (steer < -10) {
+			set_left_motors_forward();
+			set_right_motors_reverse();
+		}
+		else if (steer > 10) {
+			set_left_motors_reverse();
+			set_right_motors_forward();
+		}
+		else {
+			set_left_motors_reverse();
+			set_right_motors_reverse();
+		}
+
+	}
 }
 
 void set_car_configuration(int speed, int steer)
@@ -66,13 +110,13 @@ void set_car_configuration(int speed, int steer)
 	if (right_speed < 10)
 		stop_right_motors();
 
-	left_speed = 1700 + (5000 - 1700) / 100 * left_speed;
-	if (left_speed >= 4850)
-		left_speed = 4850;
+	left_speed = 10000 + (20000 - 10000) / 100 * left_speed;
+	if (left_speed >= 19000)
+		left_speed = 19000;
 
-	right_speed = 1700 + (5000 - 1700) / 100 * right_speed;
-	if (right_speed >= 4850)
-		right_speed = 4850;
+	right_speed = 10000 + (2000 - 10000) / 100 * right_speed;
+	if (right_speed >= 19000)
+		right_speed = 19000;
 
 	OCR1A = left_speed;
 	OCR1B = right_speed;
@@ -80,14 +124,38 @@ void set_car_configuration(int speed, int steer)
 
 void set_motor_reverse()
 {
-    PORTC &= ~(0b00001111);
-    PORTC |= 0b00001010;
+   	PORTC &= ~(0b00001111);
+   	PORTC |= 0b00001010;
 }
 
 void set_motor_forward()
 {
-    PORTC &= ~(0b01111000);
-    PORTC |= 0b00000101;
+   	PORTC &= ~(0b00001111);
+   	PORTC |= 0b00000101;
+}
+
+void set_left_motors_forward()
+{
+	PORTC &= ~(0b00000011);
+    	PORTC |= 0b00000001;
+}
+
+void set_right_motors_forward()
+{
+	PORTC &= ~(0b00001100);
+    	PORTC |= 0b00000100;
+}
+
+void set_left_motors_reverse()
+{
+	PORTC &= ~(0b00000011);
+    	PORTC |= 0b00000010;
+}
+
+void set_right_motors_reverse()
+{
+	PORTC &= ~(0b00001100);
+    	PORTC |= 0b00001000;
 }
 
 void stop_motors()

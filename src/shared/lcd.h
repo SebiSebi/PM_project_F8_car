@@ -114,6 +114,8 @@ void LCD_writeInstr(uint8_t instr);
 // Trimite o instructiune de scriere date catre LCD.
 void LCD_writeData(uint8_t data);
 
+// Sterge toate caracterele de pe LCD
+void LCD_clear();
 
 void LCD_putChar(char c);                           // Afiseaza caracterul pe LCD la adresa curenta.
 void LCD_putCharAt(uint8_t addr, char c);           // Afiseaza caracterul pe LCD la adresa primita.
