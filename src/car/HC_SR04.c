@@ -1,6 +1,8 @@
 #include "HC_SR04.h"
+#include "motor.h"
 
 #include <stdint.h>
+#include <math.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
@@ -10,8 +12,12 @@ static volatile uint8_t saved_tcnt0 = 0;
 static volatile uint8_t saved_count = 0;
 static volatile float saved_distance = 0.0f;
 static volatile uint8_t timer2_count = 0;
+static volatile uint8_t wrong_samples = 0;
+
+volatile uint8_t too_close_flag = 0;
 
 extern uint8_t horn_pressed; /* Defined in main */
+extern volatile int8_t moving_forward; /* Defined in motor.c */
 
 ISR(TIMER0_OVF_vect, ISR_NOBLOCK) // Other interrupts aren't blocked during this routine
 {
@@ -35,6 +41,9 @@ ISR(PCINT0_vect, ISR_NOBLOCK) // Other interrupts are blocked during this routin
 
 void HC_SR04_init()
 {
+	too_close_flag = 0;
+	wrong_samples = 0;
+
 	TCCR0A = 0;
 	TCCR0B = 0;
 	TIMSK0 = 0;
@@ -80,15 +89,36 @@ ISR(TIMER2_COMPA_vect, ISR_NOBLOCK)
 	if (timer2_count == 12) {
 		TIMSK2 &= ~(1 << OCIE2A); /* Temporary disable this interrupt */
 	
-		saved_distance = HC_SR04_get_distance();
+		float new_distance = HC_SR04_get_distance();
+		if (fabs(new_distance - saved_distance) >= 500) {
+			wrong_samples++;
+			if (wrong_samples >= 5) {
+				saved_distance = new_distance;
+				wrong_samples = 0;
+			}			
+		}
+		else {
+			saved_distance = new_distance;
+			wrong_samples = 0;
+		}
 
+		if (saved_distance < MINIMUM_SAFE_DISTANCE)	
+			too_close_flag = 1;	
+		else 
+			too_close_flag = 0;
+
+		if (moving_forward == 1 && too_close_flag == 1)
+			stop_motors();
+
+		/* Enable horn if the distance is too short. */
 		if (horn_pressed == 0) {
 			/* Do not interfere with the user */
-			if (saved_distance <= 33.0f)
+			if (saved_distance < MINIMUM_SAFE_DISTANCE)
 				PORTB |= (1 << PB0);
 			else PORTB &= ~(1 << PB0);
 		}
 
+		
 		timer2_count = 0;
 		TCNT2 = 0; /* Reset counter */
 		TIMSK2 |= (1 << OCIE2A); /* Restore interrupt */

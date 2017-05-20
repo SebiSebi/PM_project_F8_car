@@ -3,6 +3,9 @@
 
 #include <avr/io.h>
 
+volatile int8_t moving_forward = 0;
+extern volatile uint8_t too_close_flag;  /* Defined in HC_SR04.c */ 
+
 void DC_motor_init()
 {
     DDRD |= (1 << PIND5) | (1 << PIND4); /* Enable output driver. */
@@ -22,25 +25,25 @@ void DC_motor_init()
     ICR1 = 2000; /* (100, 340 min), (10000, 2500) (20000, 2 * 1850)*/
     OCR1A = 1800;
     OCR1B = 1800;
-
-    /* Baterie plina (9.2V) la 50Hz PWM */
-    /* 5000 -> 2.3V pe motoare -> nu pornesc */
-    /* 7500 -> 3.3V pe motoare -> merg ok */
-    /* 13500 -> 4.8V pe motor */
-
-    /* Initialize motor direction */
+ 
+    /* Initialize motor direction. */
     DDRC =  0b00001111;
     PORTC = 0b00000000;
+
+    /* The car is currently stopped. */
+    moving_forward = 0;
 }
 
 void set_car_binary_configuration(int speed, int steer)
 {
 	if (speed > -10 && speed < 10) {
+		moving_forward = 0;
 		stop_motors();
 		return ;
 	}
 
-	if (speed > 0 && HC_SR04_get_distance_auto() <= 33.0f) {
+	if (speed > 0 && too_close_flag == 1) {
+		moving_forward = 1;
 		stop_motors();
 		return ;
 	}
@@ -58,8 +61,10 @@ void set_car_binary_configuration(int speed, int steer)
 			set_left_motors_forward();
 			set_right_motors_forward();
 		}
+		moving_forward = 1;
 	}
 	else {
+		moving_forward = 0;
 		if (steer < -10) {
 			set_left_motors_forward();
 			set_right_motors_reverse();

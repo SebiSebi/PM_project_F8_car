@@ -50,6 +50,42 @@ int horn_button_pushed(void)
 	return 0;
 }
 
+/* Normalize a value between -100 and 100, inclusive. */
+static int normalize_percentage(int value)
+{
+	if (value < -100)
+		return -100;
+	if (value > 100)
+		return 100;
+
+	return value;
+}
+
+/* Converts raw data from the accelerometer into useful data. */
+void get_data_from_MPU_6050(char *speed, char *steer)
+{
+	double ax, ay, az, gx, gy, gz;
+	mpu6050_getConvData(&ax, &ay, &az, &gx, &gy, &gz);
+
+	sprintf(speed, "%d", normalize_percentage((int)(ax * 100)));
+	sprintf(steer," %d", normalize_percentage(-(int)(ay * 100)));
+}
+
+void get_data_from_MPU_6050_soft(char *speed, char *steer)
+{
+	double ax, ay, az, gx, gy, gz;
+	mpu6050_getConvData(&ax, &ay, &az, &gx, &gy, &gz);
+
+	sprintf(speed, "%d", normalize_percentage((int)(ax * 100)));
+
+	int aux = -ay * 100;
+	if (aux < -45)
+		sprintf(steer, "%d", -50);
+	else if (aux > 45)
+		sprintf(steer, "%d", 50);
+	else sprintf(steer, "%d", 0);
+}
+
 int main()
 {
 	remote_init();
@@ -105,22 +141,25 @@ int main()
 			BT_put("OFF");
 		}
 
-		/*
-		char x[10];
-		char y[10];
-		x[0] = '\0'; y[0] = '\0';
+		char speed[10], steer[10];
+		if (mode == JOYSTICK) {	
+			sprintf(steer, "%d", -JS_getX());
+			sprintf(speed, "%d", JS_getY());
+		}
+		else {
+			get_data_from_MPU_6050_soft(speed, steer);
+		}
 		
-		sprintf(x, "%d", JS_getX());
-		sprintf(y, "%d", JS_getY());
+		LCD_clear();
+		LCD_printAt(0, "Speed: ");
+		LCD_printAt(7, speed);
+		LCD_printAt(0x40, "Steer: ");
+		LCD_printAt(0x47, steer);
 
-		LCD_writeInstr(LCD_INSTR_clearDisplay);
-		LCD_printAt(0, x);
-		LCD_printAt(40, y);
-
+		/* Send command to the car */	
 		BT_put("CAR");
-		BT_put(x);
-		BT_put(y);
-		*/
+		BT_put(speed);
+		BT_put(steer);
 
 		_delay_ms(COMMAND_PERIOD);	
 	}
