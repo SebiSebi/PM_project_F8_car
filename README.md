@@ -18,7 +18,7 @@ folder is the following:
 Using the car
 -------------
 
-To play with the car you first have to plug into the battery into the car and then into the remote control. The order
+To play with the car you first have to plug into the battery into the car and then into the remote control. This order
 **must** be followed accordingly. If the connection between the car and the remote has been established the green
 LED on the car should start to turn on and off a couple of times per second. By default, the car is controlled using
 the joystick button. You can switch between joystick and accelerometer using the push button on the remote.
