@@ -2,7 +2,8 @@
 #define HC_SR04_H__
 
 #define HC_SR04_NUM_ITERATIONS 		1
-#define MINIMUM_SAFE_DISTANCE		33.0f  /* centimeters */
+#define MINIMUM_SAFE_DISTANCE_STATIC	10.0f  /* centimeters */
+#define MINIMUM_SAFE_DISTANCE_MOVING	50.0f  /* centimeters */
 
 /* This must be called before calling any other function. */
 void HC_SR04_init();

@@ -86,9 +86,13 @@ void HC_SR04_set_auto_mode()
 ISR(TIMER2_COMPA_vect, ISR_NOBLOCK)
 {
 	timer2_count++;
-	if (timer2_count == 12) {
+	if (timer2_count == 12) { /* Sample each 200ms */
 		TIMSK2 &= ~(1 << OCIE2A); /* Temporary disable this interrupt */
-	
+
+		/**
+		 * Update distance. Sometimes the HC-SR05 failes to be accurate if the
+		 * angle to the front object is greater than 15 degrees.
+		 */
 		float new_distance = HC_SR04_get_distance();
 		if (fabs(new_distance - saved_distance) >= 500) {
 			wrong_samples++;
@@ -102,7 +106,11 @@ ISR(TIMER2_COMPA_vect, ISR_NOBLOCK)
 			wrong_samples = 0;
 		}
 
-		if (saved_distance < MINIMUM_SAFE_DISTANCE)	
+		/* The higher the speed the greater the safe disance. */
+		float min_dist = ((float)MINIMUM_SAFE_DISTANCE_MOVING - MINIMUM_SAFE_DISTANCE_STATIC) * get_car_speed() / 100.0f;
+		min_dist += MINIMUM_SAFE_DISTANCE_STATIC;
+
+		if (saved_distance < min_dist)	
 			too_close_flag = 1;	
 		else 
 			too_close_flag = 0;
@@ -113,7 +121,7 @@ ISR(TIMER2_COMPA_vect, ISR_NOBLOCK)
 		/* Enable horn if the distance is too short. */
 		if (horn_pressed == 0) {
 			/* Do not interfere with the user */
-			if (saved_distance < MINIMUM_SAFE_DISTANCE)
+			if (saved_distance < min_dist)
 				PORTB |= (1 << PB0);
 			else PORTB &= ~(1 << PB0);
 		}

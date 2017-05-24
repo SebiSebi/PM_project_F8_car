@@ -13,6 +13,7 @@
 
 uint8_t horn_pressed = 0;
 
+/* Send back to the remote control the distance to the front object. */
 void process_distance_command(void)
 {
 	char dist[64];
@@ -21,6 +22,7 @@ void process_distance_command(void)
 	BT_put(dist);		
 }
 
+/* Receive speed and steer configuration and change car configuration. */
 void process_car_command(void)
 {
 	char msg[64];
@@ -33,9 +35,10 @@ void process_car_command(void)
 
 	PORTD ^= (1 << PD2);
 	
-	set_car_binary_configuration(speed, steer);
+	set_car_configuration(speed, steer);
 }
 
+/* Turn ON/OFF the horn. */
 void process_horn_command(void)
 {
 	char msg[64];

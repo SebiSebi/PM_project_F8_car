@@ -2,8 +2,14 @@
 #include "HC_SR04.h"
 
 #include <avr/io.h>
+#include <avr/interrupt.h>
+
+#define MIN_VALUE 1000
+#define MAX_VALUE 4000
+#define MAX_LIMIT 3900
 
 volatile int8_t moving_forward = 0;
+volatile static int car_speed = 0;
 extern volatile uint8_t too_close_flag;  /* Defined in HC_SR04.c */ 
 
 void DC_motor_init()
@@ -22,9 +28,9 @@ void DC_motor_init()
     TCCR1B |= (1 << CS11) | (1 << CS10);
 
     /* Set TOP (ICR1) to set the period. */
-    ICR1 = 2000; /* (100, 340 min), (10000, 2500) (20000, 2 * 1850)*/
-    OCR1A = 1800;
-    OCR1B = 1800;
+    ICR1 = MAX_VALUE; /* (100, 340 min), (10000, 2500) (MAX_VALUE0, 2 * 1850)*/
+    OCR1A = MIN_VALUE;
+    OCR1B = MIN_VALUE;
  
     /* Initialize motor direction. */
     DDRC =  0b00001111;
@@ -36,6 +42,7 @@ void DC_motor_init()
 
 void set_car_binary_configuration(int speed, int steer)
 {
+	car_speed = speed;
 	if (speed > -10 && speed < 10) {
 		moving_forward = 0;
 		stop_motors();
@@ -89,14 +96,30 @@ void set_car_configuration(int speed, int steer)
 	if (steer < -100) steer = -100;
 	if (steer > 100) steer = 100;
 
-	if (speed > -10 && speed < 10)
+	/* Save car speed. */
+	car_speed = speed;
+
+	cli();
+	if (speed > -10 && speed < 10) {
+		moving_forward = 0;
 		stop_motors();
-	else if (speed < 0) {
+		sei();
+		return ;
+	}
+
+	if (speed < 0) {
+		moving_forward = 0;
 		speed = -speed;
 		set_motor_reverse();
 	}
 	else {
-		set_motor_forward();
+		moving_forward = 1;
+		if (too_close_flag == 1) {
+			stop_motors();
+			sei();
+			return ;
+		}
+		else set_motor_forward();
 	}
 
 	int left_speed = speed;
@@ -115,16 +138,23 @@ void set_car_configuration(int speed, int steer)
 	if (right_speed < 10)
 		stop_right_motors();
 
-	left_speed = 10000 + (20000 - 10000) / 100 * left_speed;
-	if (left_speed >= 19000)
-		left_speed = 19000;
+	left_speed = MIN_VALUE + (MAX_VALUE - MIN_VALUE) / 100 * left_speed;
+	if (left_speed >= MAX_LIMIT)
+		left_speed = MAX_LIMIT;
 
-	right_speed = 10000 + (2000 - 10000) / 100 * right_speed;
-	if (right_speed >= 19000)
-		right_speed = 19000;
+	right_speed = MIN_VALUE + (MAX_VALUE - MIN_VALUE) / 100 * right_speed;
+	if (right_speed >= MAX_LIMIT)
+		right_speed = MAX_LIMIT;
 
 	OCR1A = left_speed;
 	OCR1B = right_speed;
+	sei();
+}
+
+/* From 0 to 100%. */
+int get_car_speed(void)
+{
+	return car_speed;
 }
 
 void set_motor_reverse()

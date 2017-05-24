@@ -14,9 +14,10 @@
 #include <util/delay.h>
 #include <math.h>  //include libm
 
-#define COMMAND_PERIOD 		200 /* in milliseconds */
+#define COMMAND_PERIOD 		150 /* in milliseconds */
 #define JOYSTICK 		0
 #define ACCELEROMETER 		1
+#define STEER_SENSITIVITY 	1.5
 
 void remote_init(void)
 {
@@ -68,7 +69,7 @@ void get_data_from_MPU_6050(char *speed, char *steer)
 	mpu6050_getConvData(&ax, &ay, &az, &gx, &gy, &gz);
 
 	sprintf(speed, "%d", normalize_percentage((int)(ax * 100)));
-	sprintf(steer," %d", normalize_percentage(-(int)(ay * 100)));
+	sprintf(steer," %d", normalize_percentage(-(int)(ay * STEER_SENSITIVITY * 100)));
 }
 
 void get_data_from_MPU_6050_soft(char *speed, char *steer)
@@ -147,7 +148,7 @@ int main()
 			sprintf(speed, "%d", JS_getY());
 		}
 		else {
-			get_data_from_MPU_6050_soft(speed, steer);
+			get_data_from_MPU_6050(speed, steer);
 		}
 		
 		LCD_clear();

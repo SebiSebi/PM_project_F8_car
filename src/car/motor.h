@@ -9,6 +9,7 @@ void DC_motor_init();
  */
 void set_car_configuration(int speed, int steer);
 void set_car_binary_configuration(int speed, int steer);
+int get_car_speed(void);
 
 void set_motor_forward();
 void set_motor_reverse();
