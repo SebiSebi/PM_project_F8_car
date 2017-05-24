@@ -1,8 +1,8 @@
 # Fast and Furios Car
 
 - [Intro](#intro)
-- [Using the car](#using_the_car)
-- [BT communication](#bt_communication)
+- [Using the car](#using-the-car)
+- [BT communication](#bt-communication)
 - [Feature Summary](#feature-summary)
 - [Build and run usage](#build-and-run-usage)
 
@@ -42,7 +42,7 @@ Feature Summary
 Build and run usage
 -------------------
 
-In order to program a uC (car or RC) you have to follow this steps:
+In order to program the uC (car or RC) you have to follow this steps:
 1. Run **make** in the directory car or remote;
 2. Run **burn_car.sh** or **burn_remote.sh** from the root directory.
 
